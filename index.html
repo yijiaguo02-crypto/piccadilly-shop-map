@@ -32,7 +32,7 @@ header .sub{color:var(--ink2);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px
 .legend{position:absolute;left:10px;top:10px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:12px;max-width:180px}
 .legend div{display:flex;align-items:center;gap:6px;white-space:nowrap}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
-#pop{position:absolute;left:10px;right:10px;bottom:10px;display:none;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.18);padding:12px 14px;max-width:460px}
+#pop{position:absolute;left:10px;right:10px;bottom:10px;display:none;max-height:calc(100% - 20px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.18);padding:12px 14px;max-width:460px}
 #pop .x{position:absolute;right:8px;top:6px;border:0;background:none;font-size:18px;color:var(--ink3);cursor:pointer}
 .chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
 .chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font:inherit;font-size:12.5px;color:var(--ink2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
@@ -73,6 +73,18 @@ header .sub{color:var(--ink2);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px
 .modeSeg .eta{font-size:10.5px;color:var(--ink3);font-weight:400}
 .modeSeg button.on .eta{color:var(--brand)}
 .navbox .btns{margin-top:8px}
+.fromRow{display:flex;align-items:center;gap:8px;margin:6px 0}
+.fromSeg button{font-size:12px;padding:4px 9px}
+#svg{touch-action:none;cursor:grab}
+#svg:active{cursor:grabbing}
+#mapCtl{position:absolute;right:10px;top:62px;display:flex;flex-direction:column;gap:6px}
+#mapCtl button{width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:#fff;box-shadow:0 1px 4px rgba(0,0,0,.08);font-size:17px;cursor:pointer;color:var(--ink)}
+#scaleTxt{position:absolute;right:10px;bottom:10px;font-size:11px;color:var(--ink3);background:rgba(255,255,255,.85);padding:1px 6px;border-radius:6px;pointer-events:none}
+.needs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px}
+.nrow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid #f1f5f9}
+.nrow .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nrk{width:22px;height:22px;border-radius:6px;background:#f1f5f9;color:var(--ink2);font-weight:700;display:grid;place-items:center;font-size:12px}
+.nrow:nth-of-type(1) .nrk{background:var(--good);color:#fff}
 .toolbar{display:flex;gap:8px;margin-bottom:10px}
 .toolbar input,.toolbar select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;min-width:0}
 .toolbar input{flex:1}
@@ -108,7 +120,9 @@ svg text{font-family:inherit}
   header{padding:14px 14px 8px}
   header h1{font-size:19px}
   .layout{grid-template-columns:1fr;padding:0 10px 20px;gap:10px}
-  #mapCard{position:relative;top:0;height:58vh;min-height:400px}
+  #mapCard{position:relative;top:0;height:auto;min-height:0}
+  #mapArea{flex:none;height:56vh;min-height:360px}
+  #pop{position:relative;left:auto;right:auto;bottom:auto;max-width:none;margin:10px;box-shadow:none;max-height:none}
   .tabs{top:0}
   .legend{display:none}
   .idx{grid-template-columns:118px 1fr 48px}
@@ -144,8 +158,15 @@ svg text{font-family:inherit}
       <svg id="svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="以住处为中心的门店距离示意图"></svg>
       <div id="tmap"></div>
       <div class="legend" id="legend"></div>
-      <div id="pop"></div>
+      <div id="mapCtl">
+        <button data-a="in" title="放大">＋</button>
+        <button data-a="out" title="缩小">－</button>
+        <button data-a="home" title="回到住处">🏠</button>
+        <button data-a="me" title="定位我的位置">📍</button>
+      </div>
+      <div id="scaleTxt"></div>
     </div>
+    <div id="pop"></div>
   </section>
 
   <!-- PANEL -->
@@ -158,6 +179,7 @@ svg text{font-family:inherit}
 
     <!-- 推荐 -->
     <div class="pane on" id="pane-rec">
+      <div class="card sec" id="nearest"></div>
       <div class="card sec">
         <h3>一句话结论</h3>
         <div class="muted">每周大采购去 <span class="link" data-go="n12291675968">Aldi Holloway Road</span>（步行约 11 分钟）；楼下 <span class="link" data-go="n2533273380">Sainsbury's Local</span> 只做应急；中餐食材去 <span class="link" data-go="n4457290490">兴业 Hing Yip</span>；周末一站式去 <span class="link" data-go="w233810156">Nag's Head 商圈</span>。</div>
@@ -227,7 +249,7 @@ svg text{font-family:inherit}
 </div>
 
 <footer>
-  <div><b>关于导航：</b>可选 步行 / 公交 / 骑行 / 驾车，点击后直接唤起手机上的高德、腾讯或百度地图 App 规划路线（请在手机上打开本页）。这些服务的<b>网页版</b>不支持英国路线，App 对伦敦的覆盖以实际为准；如 App 无法规划，可用「复制地址 / 坐标」粘贴到你常用的导航 App。按钮下方的时间为估算：步行 80 m/min、骑行 15 km/h、驾车含 5 分钟停车、公交含 8 分钟候车，均按直线距离 ×1.3–1.4 绕行系数。</div>
+  <div><b>关于导航：</b>可选 步行 / 公交 / 骑行 / 驾车，起点可选「我的当前位置」（由地图 App 自己定位）或「住处」，点击后直接唤起手机上的高德、腾讯或百度地图 App 规划路线（请在手机上打开本页）。终点按门店精确坐标传入，名称使用门牌地址而非品牌名，避免 App 按品牌名匹配到同名的其他分店；可用「高德核对位置」先看门店标点。这些服务的<b>网页版</b>不支持英国路线，App 对伦敦的覆盖以实际为准；如 App 无法规划，可用「复制地址 / 坐标」粘贴到你常用的导航 App。按钮下方的时间为估算：步行 80 m/min、骑行 15 km/h、驾车含 5 分钟停车、公交含 8 分钟候车，均按直线距离 ×1.3–1.4 绕行系数。</div>
   <div style="margin-top:6px"><b>数据来源：</b>门店位置 © OpenStreetMap contributors（ODbL，2026-10-03 抓取）；价格指数 Which? Cheapest Supermarkets（2026 年 8 月，92 件）；便利店溢价 Which? 便利店价格调查（42 件）。营业时间仅部分经官网核实，出发前请以门店官网为准。步行时间 = 直线距离 × 1.3 ÷ 80 m/min，为估算值。</div>
 </footer>
 
@@ -262,7 +284,7 @@ const PRICE = {
   coop:{idx:135,src:'e',label:'Co-op'}, indep:{idx:140,src:'e',label:'独立便利店'}, mands:{idx:140,src:'e',label:'M&S Food'}, waitrose_little:{idx:145,src:'e',label:'Little Waitrose'}
 };
 const KEY_LABELS = new Set(['n12291675968','n4457290490','n2533273380','n2687082149','w233810156','w30850331','w32826154','n10068538759','w30475080','w239435039']);
-const state = {R:1250, cats:new Set(Object.keys(CATS)), sel:null, base:'svg', tab:'rec'};
+const state = {R:1250, cx:0, cy:0, me:null, need:'grocery', cats:new Set(Object.keys(CATS)), sel:null, base:'svg', tab:'rec'};
 const $ = s=>document.querySelector(s), $$ = s=>Array.from(document.querySelectorAll(s));
 const walk = d => Math.max(1, Math.round(d*1.3/80));
 const cosLat = Math.cos(H.lat*Math.PI/180);
@@ -295,44 +317,72 @@ const MODES = {
   bike:{n:'骑行',i:'🚲',amap:3,qq:'bike',bd:'riding', eta:d=>Math.round(d*1.3/250+1)},
   car: {n:'驾车',i:'🚗',amap:0,qq:'drive',bd:'driving',eta:d=>Math.round(d*1.4/300+5)}
 };
-let navMode = (()=>{ try{ const m=localStorage.getItem('navMode'); return MODES[m]?m:'walk'; }catch(e){ return 'walk'; } })();
+const LS={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:v;}catch(e){return d;}},set(k,v){try{localStorage.setItem(k,v);}catch(e){}}};
+let navMode = MODES[LS.get('navMode','walk')]?LS.get('navMode','walk'):'walk';
+// 起点：me = 手机当前位置（App 自己定位，最准）；home = 住处
+let navFrom = LS.get('navFrom','me')==='home'?'home':'me';
 const UA = navigator.userAgent, isIOS=/iPhone|iPad|iPod/i.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1), isAndroid=/Android/i.test(UA);
 const isMobile = isIOS||isAndroid;
+function hav(a1,o1,a2,o2){ const R=6371000,r=Math.PI/180,dp=(a2-a1)*r,dl=(o2-o1)*r; const h=Math.sin(dp/2)**2+Math.cos(a1*r)*Math.cos(a2*r)*Math.sin(dl/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+// 当前起点到门店的直线距离（米）
+function dFrom(s){ return (navFrom==='me' && state.me) ? Math.round(hav(state.me.lat,state.me.lon,s.lat,s.lon)) : s.d; }
+const fmtD = d => d>=1000?(d/1000).toFixed(d>=10000?0:2)+' km':d+' m';
+// 终点名称刻意用「门牌地址」而不是品牌名：
+// 高德等 App 会用终点名称去匹配自家 POI，伦敦同名连锁店很多（Aldi/Tesco/Sainsbury's…），
+// 且新开门店可能不在其海外数据里，按品牌名匹配容易跳到另一家分店。用地址 + 精确坐标可避免。
+const destLabel = s => (s.addr||'').replace(/（.*?）/g,'').trim() || (s.lat.toFixed(5)+','+s.lon.toFixed(5));
 function appUrl(app, s, m){
-  const M=MODES[m], hn=encodeURIComponent(H.name), sn=encodeURIComponent(s.name);
+  const M=MODES[m], dn=encodeURIComponent(destLabel(s)), home=navFrom==='home';
+  const hn=encodeURIComponent('住处 457 Caledonian Rd');
   if(app==='amap'){
-    const q=`sourceApplication=piccadilly-shopmap&slat=${H.lat}&slon=${H.lon}&sname=${hn}&dlat=${s.lat}&dlon=${s.lon}&dname=${sn}&dev=0&t=${M.amap}`;
+    const from = home ? `slat=${H.lat}&slon=${H.lon}&sname=${hn}&` : '';   // 不传起点 = 高德「我的位置」
+    const q=`sourceApplication=piccadilly-shopmap&${from}dlat=${s.lat}&dlon=${s.lon}&dname=${dn}&dev=0&t=${M.amap}`;
     return isIOS ? 'iosamap://path?'+q : 'amapuri://route/plan/?'+q;
   }
-  if(app==='qq') return `qqmap://map/routeplan?type=${M.qq}&from=${hn}&fromcoord=${H.lat},${H.lon}&to=${sn}&tocoord=${s.lat},${s.lon}&referer=piccadilly-shopmap`;
-  if(app==='bd') return `baidumap://map/direction?origin=${encodeURIComponent('latlng:'+H.lat+','+H.lon+'|name:'+H.name)}&destination=${encodeURIComponent('latlng:'+s.lat+','+s.lon+'|name:'+s.name)}&mode=${M.bd}&coord_type=wgs84&src=${isIOS?'ios':'andr'}.piccadilly.shopmap`;
+  if(app==='amapview'){
+    const q=`sourceApplication=piccadilly-shopmap&poiname=${encodeURIComponent(s.name)}&lat=${s.lat}&lon=${s.lon}&dev=0`;
+    return isIOS ? 'iosamap://viewMap?'+q : 'androidamap://viewMap?'+q;
+  }
+  if(app==='qq'){
+    const from = home ? `from=${hn}&fromcoord=${H.lat},${H.lon}&` : '';    // 不传起点 = 腾讯地图当前位置
+    return `qqmap://map/routeplan?type=${M.qq}&${from}to=${dn}&tocoord=${s.lat},${s.lon}&referer=piccadilly-shopmap`;
+  }
+  if(app==='bd'){
+    const from = home ? `origin=${encodeURIComponent('latlng:'+H.lat+','+H.lon+'|name:住处 457 Caledonian Rd')}&` : '';
+    return `baidumap://map/direction?${from}destination=${encodeURIComponent('latlng:'+s.lat+','+s.lon+'|name:'+destLabel(s))}&mode=${M.bd}&coord_type=wgs84&src=${isIOS?'ios':'andr'}.piccadilly.shopmap`;
+  }
 }
-const APPS={amap:'高德',qq:'腾讯地图',bd:'百度地图'};
-function openApp(app, id){
+const APPS={amap:'高德',amapview:'高德',qq:'腾讯地图',bd:'百度地图'};function openApp(app, id){
   const s=byId[id]; if(!s) return;
   if(!isMobile){ toast('请在手机上打开本页再点导航（电脑端无法唤起地图 App）'); return; }
+  toast(app==='amapview' ? `在高德中标出：${s.name}` : `${MODES[navMode].n}导航 → ${s.name}（${destLabel(s)}），起点：${navFrom==='home'?'住处':'我的位置'}`, 2600);
   const t0=Date.now(); let left=false;
   const onHide=()=>{ if(document.hidden) left=true; };
   document.addEventListener('visibilitychange',onHide);
-  location.href=appUrl(app,s,navMode);
+  setTimeout(()=>{ location.href=appUrl(app,s,navMode); }, 350);
   setTimeout(()=>{ document.removeEventListener('visibilitychange',onHide);
-    if(!left && Date.now()-t0<3500) toast(`没能打开${APPS[app]||'地图'} App：可能未安装。可换一个 App，或复制地址自行导航`);
-  },2200);
+    if(!left && Date.now()-t0<4000) toast(`没能打开${APPS[app]||'地图'} App：可能未安装。可换一个 App，或复制地址自行导航`, 3000);
+  },2600);
 }
 function etaText(m,d){ const v=MODES[m].eta(d); return v==null?(m==='bus'?'步行更快':''):`约${v}分`; }
+function fromSeg(){ return `<div class="fromRow"><span class="tiny">起点</span><div class="seg fromSeg">
+  <button data-from="me" class="${navFrom==='me'?'on':''}">📍 我的当前位置</button><button data-from="home" class="${navFrom==='home'?'on':''}">🏠 住处</button></div></div>`; }
 function navBtns(s){
-  const seg=Object.entries(MODES).map(([k,v])=>`<button class="${k===navMode?'on':''}" data-mode="${k}">${v.i} ${v.n}<span class="eta">${etaText(k,s.d)}</span></button>`).join('');
+  const d=dFrom(s);
+  const seg=Object.entries(MODES).map(([k,v])=>`<button class="${k===navMode?'on':''}" data-mode="${k}">${v.i} ${v.n}<span class="eta">${etaText(k,d)}</span></button>`).join('');
   return `<div class="navbox">
+    ${fromSeg()}
     <div class="seg modeSeg">${seg}</div>
     <div class="btns">
-      <button class="btn pri" data-nav="amap" data-sid="${s.id}">🧭 高德 App</button>
-      <button class="btn" data-nav="qq" data-sid="${s.id}">🗺️ 腾讯地图 App</button>
-      <button class="btn" data-nav="bd" data-sid="${s.id}">📍 百度地图 App</button>
+      <button class="btn pri" data-nav="amap" data-sid="${s.id}">🧭 高德导航</button>
+      <button class="btn" data-nav="qq" data-sid="${s.id}">🗺️ 腾讯地图</button>
+      <button class="btn" data-nav="bd" data-sid="${s.id}">📍 百度地图</button>
+      <button class="btn" data-nav="amapview" data-sid="${s.id}" title="在高德中按精确坐标标出门店，用于核对位置">🔍 高德核对位置</button>
       <button class="btn" data-copy="${esc(s.name+', '+s.addr+', London')}">📋 复制地址</button>
       <button class="btn" data-copy="${s.lat}, ${s.lon}">📍 复制坐标</button>
     </div></div>`;
 }
-function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1600); }
+function toast(t,ms){ const el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),ms||1800); }
 function copy(t){
   const ok=()=>toast('已复制：'+t);
   if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(t).then(ok,()=>fallback()); } else fallback();
@@ -340,8 +390,12 @@ function copy(t){
 }
 document.addEventListener('click',e=>{
   const c=e.target.closest('[data-copy]'); if(c){ e.stopPropagation(); copy(c.getAttribute('data-copy')); return; }
-  const md=e.target.closest('[data-mode]'); if(md){ e.stopPropagation(); navMode=md.dataset.mode; try{localStorage.setItem('navMode',navMode);}catch(_){}
+  const md=e.target.closest('[data-mode]'); if(md){ e.stopPropagation(); navMode=md.dataset.mode; LS.set('navMode',navMode);
     $$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===navMode)); toast('导航方式：'+MODES[navMode].n); return; }
+  const fr=e.target.closest('[data-from]'); if(fr){ e.stopPropagation(); navFrom=fr.dataset.from; LS.set('navFrom',navFrom);
+    if(navFrom==='me' && !state.me) locate(false);
+    refreshDist(); toast('起点：'+(navFrom==='home'?'住处':'我的当前位置')); return; }
+  const nr=e.target.closest('[data-need]'); if(nr){ e.stopPropagation(); state.need=nr.dataset.need; renderNearest(); return; }
   const nv=e.target.closest('[data-nav]'); if(nv){ e.stopPropagation(); openApp(nv.dataset.nav, nv.dataset.sid); return; }
   const g=e.target.closest('[data-go]'); if(g){ select(g.getAttribute('data-go'), true); }
 });
@@ -363,25 +417,35 @@ $('#chips').addEventListener('click',e=>{
 });
 const visible = ()=>S.filter(s=>state.cats.has(s.cat));
 // ---------- SVG map ----------
+function mapGeom(){ const box=$('#mapArea').getBoundingClientRect(); const w=Math.max(box.width,200), h=Math.max(box.height,200); return {w,h,k:state.R/(Math.min(w,h)/2),box}; }
 function renderMap(){
-  const svg=$('#svg'), box=$('#mapArea').getBoundingClientRect();
-  const w=Math.max(box.width,200), h=Math.max(box.height,200), R=state.R;
-  const k = R/(Math.min(w,h)/2);           // metres per px
+  const svg=$('#svg'), {w,h,k}=mapGeom(), R=state.R, cx=state.cx, cy=state.cy;
   const vw=w*k, vh=h*k;
-  svg.setAttribute('viewBox', `${-vw/2} ${-vh/2} ${vw} ${vh}`);
+  svg.setAttribute('viewBox', `${cx-vw/2} ${cy-vh/2} ${vw} ${vh}`);
   const px=v=>v*k; let o='';
   // rings
-  const step = R<=700?200:500;
-  for(let r=step;r<=Math.max(vw,vh);r+=step){
+  const step = R<=450?100:R<=900?200:500;
+  const rmax = Math.hypot(Math.abs(cx)+vw/2, Math.abs(cy)+vh/2);
+  for(let r=step;r<=rmax;r+=step){
     o+=`<circle cx="0" cy="0" r="${r}" fill="none" stroke="${r%1000===0?'#cbd5e1':'#e2e8f0'}" stroke-width="${px(1)}" stroke-dasharray="${px(4)} ${px(4)}"/>`;
     o+=`<text x="${-r*0.766}" y="${r*0.643+px(12)}" font-size="${px(11)}" fill="#94a3b8" text-anchor="middle" stroke="#fff" stroke-width="${px(3)}" paint-order="stroke">${r>=1000?(r/1000)+'km':r+'m'} · 步行约${walk(r)}分钟</text>`;
   }
   // compass
-  o+=`<g transform="translate(${vw/2-px(28)},${-vh/2+px(32)})"><circle r="${px(15)}" fill="#fff" stroke="#e2e8f0" stroke-width="${px(1)}"/><path d="M0 ${-px(11)} L${px(5)} ${px(4)} L0 ${px(1)} L${-px(5)} ${px(4)}Z" fill="#0f172a"/><text y="${px(12)}" font-size="${px(9)}" text-anchor="middle" fill="#475569">N</text></g>`;
+  o+=`<g transform="translate(${cx+vw/2-px(28)},${cy-vh/2+px(32)})"><circle r="${px(15)}" fill="#fff" stroke="#e2e8f0" stroke-width="${px(1)}"/><path d="M0 ${-px(11)} L${px(5)} ${px(4)} L0 ${px(1)} L${-px(5)} ${px(4)}Z" fill="#0f172a"/><text y="${px(12)}" font-size="${px(9)}" text-anchor="middle" fill="#475569">N</text></g>`;
   // landmarks
   LM.forEach(l=>{ const [x,y]=proj(l.lat,l.lon); const s=px(7);
     o+=`<rect x="${x-s/2}" y="${y-s/2}" width="${s}" height="${s}" rx="${px(1.5)}" fill="#fff" stroke="#64748b" stroke-width="${px(1.5)}"/>`;
     o+=`<text x="${x+px(7)}" y="${y+px(4)}" font-size="${px(10.5)}" fill="#64748b" font-style="italic">${esc(l.n)}</text>`; });
+  // route hint: origin -> selected store
+  const selS = state.sel && byId[state.sel];
+  if(selS){
+    const [sx,sy]=proj(selS.lat,selS.lon);
+    const useMe = navFrom==='me' && state.me && state.me.near;
+    const [ox,oy]= useMe ? proj(state.me.lat,state.me.lon) : [0,0];
+    const d=dFrom(selS);
+    o+=`<line x1="${ox}" y1="${oy}" x2="${sx}" y2="${sy}" stroke="#0f766e" stroke-width="${px(2.5)}" stroke-dasharray="${px(7)} ${px(5)}" stroke-linecap="round" opacity=".85"/>`;
+    o+=`<text x="${(ox+sx)/2}" y="${(oy+sy)/2-px(6)}" text-anchor="middle" font-size="${px(12)}" font-weight="700" fill="#0f766e" stroke="#fff" stroke-width="${px(4)}" paint-order="stroke">${fmtD(d)} · ${MODES[navMode].i}${etaText(navMode,d)||''}</text>`;
+  }
   // stores
   const vs=visible().slice().sort((a,b)=>(a.id===state.sel)-(b.id===state.sel));
   vs.forEach(s=>{
@@ -398,31 +462,116 @@ function renderMap(){
   o+=`<g style="pointer-events:none"><circle r="${px(16)}" fill="#0f766e" opacity=".15"/><circle r="${px(11)}" fill="#0f766e" stroke="#fff" stroke-width="${px(2.5)}"/>
       <path d="M${-px(5)} ${px(1)} L0 ${-px(5)} L${px(5)} ${px(1)} V${px(5)} H${-px(5)}Z" fill="#fff"/>
       <text y="${px(28)}" text-anchor="middle" font-size="${px(12.5)}" font-weight="700" fill="#0f766e" stroke="#fff" stroke-width="${px(3)}" paint-order="stroke">家 · Piccadilly Court</text></g>`;
+  // me
+  if(state.me && state.me.near){
+    const [mx,my]=proj(state.me.lat,state.me.lon), acc=Math.min(state.me.acc||0,400);
+    o+=`<g style="pointer-events:none">${acc>15?`<circle cx="${mx}" cy="${my}" r="${acc}" fill="#3b82f6" opacity=".10" stroke="#3b82f6" stroke-opacity=".3" stroke-width="${px(1)}"/>`:''}
+      <circle cx="${mx}" cy="${my}" r="${px(8)}" fill="#2563eb" stroke="#fff" stroke-width="${px(3)}"/>
+      <text x="${mx}" y="${my-px(13)}" text-anchor="middle" font-size="${px(11.5)}" font-weight="700" fill="#1d4ed8" stroke="#fff" stroke-width="${px(3)}" paint-order="stroke">我</text></g>`;
+  }
   svg.innerHTML=o;
+  $('#scaleTxt').textContent = `视野半径 ${fmtD(Math.round(R))}`;
 }
-$('#svg').addEventListener('click',e=>{ const m=e.target.closest('.mk'); if(m) select(m.dataset.id,false); else { state.sel=null; $('#pop').style.display='none'; renderMap(); markList(); } });
-$('#zoomSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; $$('#zoomSeg button').forEach(x=>x.classList.toggle('on',x===b)); state.R=+b.dataset.r; renderMap(); });
+// ---- pan / zoom (drag, wheel, pinch) ----
+const ptrs=new Map(); let drag=null, moved=false;
+function setR(R, ax, ay){ // ax, ay: anchor in px relative to map centre
+  const {k}=mapGeom(); R=Math.max(200,Math.min(3500,R));
+  const k2=R/(state.R/k); // new metres-per-px
+  if(ax!=null){ state.cx += ax*(k-k2); state.cy += ay*(k-k2); }
+  state.R=R; $$('#zoomSeg button').forEach(x=>x.classList.remove('on')); renderMap();
+}
+const svgEl=$('#svg');
+svgEl.addEventListener('pointerdown',e=>{ ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY}); moved=false;
+  if(ptrs.size===1) drag={x:e.clientX,y:e.clientY,cx:state.cx,cy:state.cy};
+  if(ptrs.size===2){ const [a,b]=[...ptrs.values()]; drag={pinch:Math.hypot(a.x-b.x,a.y-b.y),R:state.R}; } });
+svgEl.addEventListener('pointermove',e=>{ if(!ptrs.has(e.pointerId)||!drag) return; ptrs.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  const {k,box}=mapGeom();
+  if(ptrs.size===1 && drag.cx!=null){ const dx=e.clientX-drag.x, dy=e.clientY-drag.y; if(!moved && Math.abs(dx)+Math.abs(dy)>5){ moved=true; try{svgEl.setPointerCapture(e.pointerId);}catch(_){} } if(!moved) return;
+    state.cx=drag.cx-dx*k; state.cy=drag.cy-dy*k; renderMap(); }
+  else if(ptrs.size===2 && drag.pinch){ const [a,b]=[...ptrs.values()]; const dd=Math.hypot(a.x-b.x,a.y-b.y); moved=true;
+    const mx=(a.x+b.x)/2-box.left-box.width/2, my=(a.y+b.y)/2-box.top-box.height/2; setR(drag.R*drag.pinch/dd, mx, my); drag.R=state.R; drag.pinch=dd; } });
+const endPtr=e=>{ ptrs.delete(e.pointerId); if(ptrs.size===0) drag=null; else if(ptrs.size===1){ const p=[...ptrs.values()][0]; drag={x:p.x,y:p.y,cx:state.cx,cy:state.cy}; } };
+svgEl.addEventListener('pointerup',endPtr); svgEl.addEventListener('pointercancel',endPtr);
+svgEl.addEventListener('wheel',e=>{ e.preventDefault(); const {box}=mapGeom(); setR(state.R*Math.exp(e.deltaY*0.0015), e.clientX-box.left-box.width/2, e.clientY-box.top-box.height/2); },{passive:false});
+svgEl.addEventListener('click',e=>{ if(moved){ moved=false; return; } const m=e.target.closest('.mk'); if(m) select(m.dataset.id,false); else { state.sel=null; $('#pop').style.display='none'; renderMap(); markList(); } });
+$('#zoomSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; $$('#zoomSeg button').forEach(x=>x.classList.toggle('on',x===b)); state.R=+b.dataset.r; state.cx=0; state.cy=0; renderMap(); });
+$('#mapCtl').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; const a=b.dataset.a;
+  if(a==='in') setR(state.R/1.5,0,0); else if(a==='out') setR(state.R*1.5,0,0);
+  else if(a==='home'){ state.cx=0; state.cy=0; renderMap(); }
+  else if(a==='me') locate(true); });
+// ---- geolocation ----
+function locate(center){
+  if(!navigator.geolocation){ toast('此浏览器不支持定位'); return; }
+  if(!window.isSecureContext){ toast('定位需要 https 页面'); return; }
+  toast('正在获取你的位置…',4000);
+  navigator.geolocation.getCurrentPosition(p=>{
+    const lat=p.coords.latitude, lon=p.coords.longitude, d=hav(H.lat,H.lon,lat,lon);
+    state.me={lat,lon,acc:p.coords.accuracy,near:d<6000,d};
+    if(state.me.near){ toast(`已定位：距住处 ${fmtD(Math.round(d))}`); if(center){ const [x,y]=proj(lat,lon); state.cx=x; state.cy=y; } }
+    else toast(`你现在距住处 ${fmtD(Math.round(d))}，不在地图范围内；距离仍按住处计算`,3500);
+    refreshDist();
+  }, err=>{ toast(err.code===1?'未授权定位：请在浏览器设置中允许本站使用位置':'定位失败，请稍后再试',3500); }, {enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+}
+function refreshDist(){
+  renderMap(); renderNearest(); if(state.tab==='list') renderList();
+  if(state.sel && $('#pop').style.display==='block') select(state.sel,false,true);
+  $$('.fromSeg button').forEach(b=>b.classList.toggle('on',b.dataset.from===navFrom));
+}
+// ---- nearest finder ----
+const NEEDS=[
+  ['grocery','🛒 超市',s=>s.cat==='grocery'],
+  ['cheap','💷 最便宜超市',s=>s.price==='aldi'||s.price==='lidl'],
+  ['conv','🏪 便利店',s=>s.cat==='conv'],
+  ['asian','🥢 亚洲食材',s=>s.cat==='asian'],
+  ['health','💊 药房药妆',s=>s.cat==='health'],
+  ['home','🧹 家居/百元店',s=>s.cat==='home'],
+  ['frozen','🧊 冷冻',s=>s.cat==='frozen'],
+  ['service','📮 邮局',s=>s.cat==='service'],
+];
+function renderNearest(){
+  const el=$('#nearest'); if(!el) return;
+  const need=NEEDS.find(n=>n[0]===state.need)||NEEDS[0];
+  const arr=S.filter(need[2]).map(s=>({s,d:dFrom(s)})).sort((a,b)=>a.d-b.d).slice(0,3);
+  const origin = (navFrom==='me' && state.me) ? (state.me.near?'你的当前位置':'住处（你不在附近）') : '住处';
+  el.innerHTML=`<h3>找离我最近的</h3>
+   <div class="needs">${NEEDS.map(n=>`<button class="chip ${n[0]===need[0]?'on':''}" data-need="${n[0]}">${n[1]}</button>`).join('')}</div>
+   ${fromSeg()}
+   <div class="tiny" style="margin:4px 0 2px">按到 <b>${origin}</b> 的直线距离排序${navFrom==='me'&&!state.me?' · <span class="link" data-locme="1">点此获取我的位置</span>':''}</div>
+   ${arr.map((a,i)=>`<div class="nrow"><div class="nrk">${i+1}</div><div style="min-width:0"><div class="n"><span class="link" data-go="${a.s.id}">${esc(a.s.name)}</span></div>
+     <div class="tiny">${fmtD(a.d)} · ${MODES[navMode].i} ${etaText(navMode,a.d)||'—'} · ${esc(destLabel(a.s))}</div></div>
+     <button class="btn pri" data-nav="amap" data-sid="${a.s.id}">🧭 导航</button></div>`).join('')}`;
+}
+document.addEventListener('click',e=>{ if(e.target.closest('[data-locme]')) locate(false); });
 window.addEventListener('resize',()=>{ clearTimeout(renderMap._t); renderMap._t=setTimeout(renderMap,120); });
 // ---------- selection ----------
 function storeDetail(s){
   const t=tier(s);
   return `<div class="top"><div><div class="nm">${esc(s.name)}</div>
     <div class="meta"><span class="tag"><span class="dot" style="background:${CATS[s.cat].c}"></span>${CATS[s.cat].n}</span>
-    <span>📏 ${s.d>=1000?(s.d/1000).toFixed(2)+' km':s.d+' m'}</span><span>🚶 约 ${walk(s.d)} 分钟</span></div></div>
+    <span>📏 ${fmtD(dFrom(s))}${navFrom==='me'&&state.me?'（距你）':''}</span><span>🚶 约 ${walk(dFrom(s))} 分钟</span></div></div>
     <span class="tier ${t.cls}">${t.t}</span></div>
     <div class="meta">📍 ${esc(s.addr)}</div>
     ${s.hours?`<div class="meta">🕘 ${esc(s.hours)}</div>`:''}
     ${s.note?`<div class="meta" style="color:#0f172a">💡 ${esc(s.note)}</div>`:''}`;
 }
-function select(id, fromPanel){
+function select(id, fromPanel, keepView){
   const s=byId[id]; if(!s) return;
   if(!state.cats.has(s.cat)){ state.cats.add(s.cat); renderChips(); }
   state.sel=id;
-  // auto-zoom so the store fits
-  const need = s.d<=550?650:s.d<=1150?1250:2250;
-  if(need>state.R){ state.R=need; $$('#zoomSeg button').forEach(x=>x.classList.toggle('on',+x.dataset.r===need)); }
-  renderMap(); markList();
   const pop=$('#pop'); pop.innerHTML=`<button class="x" aria-label="关闭">×</button>`+storeDetail(s)+navBtns(s); pop.style.display='block';
+  if(!keepView){ // fit origin + store into the part of the map not covered by the popup
+    const [sx,sy]=proj(s.lat,s.lon); const {w,h}=mapGeom();
+    const [ox,oy]=(navFrom==='me'&&state.me&&state.me.near)?proj(state.me.lat,state.me.lon):[0,0];
+    const overlay = window.innerWidth>900, pw = 0, ph = overlay?pop.offsetHeight+20:0; // 电脑端弹窗压在地图底部；手机端在地图下方
+    const aw=w-pw-230, ah=h-ph-110;                   // usable px area (留出右侧店名标签)
+    const spanX=Math.abs(sx-ox)+160, spanY=Math.abs(sy-oy)+160; // metres incl. margin
+    const k2=Math.max(spanX/aw, spanY/ah, state.R/(Math.min(w,h)/2)*0.6);
+    state.R=Math.max(200,Math.min(3500,k2*Math.min(w,h)/2));
+    // centre of usable area is shifted right (wide) / up (narrow) relative to map centre
+    state.cx=(sx+ox)/2 - (pw/2)*k2 + 60*k2; state.cy=(sy+oy)/2 + (ph/2)*k2;
+    $$('#zoomSeg button').forEach(x=>x.classList.remove('on'));
+  }
+  renderMap(); markList();
   pop.querySelector('.x').onclick=()=>{ pop.style.display='none'; state.sel=null; renderMap(); markList(); };
   if(state.base==='tmap' && tmap){ tmap.setCenter(new TMap.LatLng(s.lat,s.lon)); }
   if(fromPanel && window.innerWidth<=900) $('#mapCard').scrollIntoView({behavior:'smooth',block:'start'});
@@ -511,13 +660,15 @@ $('#baseSeg').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b) return;
   if(b.dataset.b==='tmap' && !keyOK()){ $('#modal').style.display='flex'; return; }
   state.base=b.dataset.b; $$('#baseSeg button').forEach(x=>x.classList.toggle('on',x===b));
-  const t=state.base==='tmap'; $('#tmap').style.display=t?'block':'none'; $('#svg').style.display=t?'none':'block'; $('#zoomSeg').style.visibility=t?'hidden':'visible';
+  const t=state.base==='tmap'; $('#tmap').style.display=t?'block':'none'; $('#svg').style.display=t?'none':'block'; $('#zoomSeg').style.visibility=t?'hidden':'visible'; $('#mapCtl').style.display=t?'none':'flex'; $('#scaleTxt').style.display=t?'none':'block';
   if(t && !tmap){ if(window.TMap) initT(); else { const sc=document.createElement('script'); sc.src='https://map.qq.com/api/gljs?v=1.exp&key='+encodeURIComponent(window.TMAP_KEY); sc.onload=initT; sc.onerror=()=>toast('腾讯地图加载失败，请检查 key 与域名白名单'); document.head.appendChild(sc);} }
 });
 $('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') e.currentTarget.style.display='none'; });
 // ---------- init ----------
 $('#statPill').textContent=`${S.length} 个采购点 · 2.2 km 内 · 最近超市步行 1 分钟`;
-renderChips(); renderCalc(); renderList(); requestAnimationFrame(renderMap);
+renderChips(); renderCalc(); renderList(); renderNearest(); requestAnimationFrame(renderMap);
+// 已授权过定位的话，静默获取一次当前位置
+if(navFrom==='me' && navigator.permissions && window.isSecureContext){ navigator.permissions.query({name:'geolocation'}).then(p=>{ if(p.state==='granted') locate(false); }).catch(()=>{}); }
 const h0=location.hash.slice(1); if(['rec','list','calc'].includes(h0)) document.querySelector(`.tabs [data-t="${h0}"]`).click();
 })();
 </script>

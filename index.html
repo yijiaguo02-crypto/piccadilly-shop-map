@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Piccadilly Court 周边采购地图 · 性价比与导航</title>
+<meta name="description" content="以 Piccadilly Court（457-463 Caledonian Rd, N7 9BJ）为中心的伦敦 Holloway / King's Cross 周边采购地图：超市、亚洲食材、药妆、家居、市集，含步行距离与性价比计算。">
+<style>
+:root{
+  --bg:#f6f7f9;--card:#fff;--ink:#0f172a;--ink2:#475569;--ink3:#94a3b8;--line:#e5e7eb;
+  --brand:#0f766e;--brand2:#14b8a6;--warn:#b45309;--good:#15803d;--bad:#b91c1c;
+  --r:14px;--shadow:0 1px 2px rgba(15,23,42,.06),0 4px 16px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.55 -apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+a{color:var(--brand)}
+header{padding:18px 20px 10px;max-width:1440px;margin:0 auto}
+header h1{margin:0;font-size:22px;letter-spacing:.2px}
+header .sub{color:var(--ink2);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-radius:999px;padding:2px 10px;font-size:12px}
+.layout{max-width:1440px;margin:0 auto;padding:0 20px 28px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(360px,.85fr);gap:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow)}
+/* map */
+#mapCard{position:sticky;top:12px;height:calc(100vh - 110px);min-height:520px;display:flex;flex-direction:column;overflow:hidden}
+.mapbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;padding:10px 12px;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;background:#f1f5f9;border-radius:10px;padding:3px}
+.seg button{border:0;background:transparent;padding:5px 10px;border-radius:8px;font:inherit;font-size:13px;color:var(--ink2);cursor:pointer}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08);font-weight:600}
+#mapArea{position:relative;flex:1;min-height:0;background:radial-gradient(circle at 50% 50%,#ffffff 0,#f8fafc 60%,#f1f5f9 100%)}
+#svg{width:100%;height:100%;display:block;touch-action:manipulation}
+#tmap{position:absolute;inset:0;display:none}
+.legend{position:absolute;left:10px;top:10px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:10px;padding:6px 8px;font-size:12px;max-width:180px}
+.legend div{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none;border:1.5px solid #fff;box-shadow:0 0 0 1px rgba(0,0,0,.15)}
+#pop{position:absolute;left:10px;right:10px;bottom:10px;display:none;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 28px rgba(15,23,42,.18);padding:12px 14px;max-width:460px}
+#pop .x{position:absolute;right:8px;top:6px;border:0;background:none;font-size:18px;color:var(--ink3);cursor:pointer}
+.chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px 12px;border-bottom:1px solid var(--line)}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font:inherit;font-size:12.5px;color:var(--ink2);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.chip.on{border-color:transparent;background:var(--ink);color:#fff}
+.chip.on .dot{box-shadow:0 0 0 1px rgba(255,255,255,.5)}
+/* panel */
+#panel{display:flex;flex-direction:column;min-width:0}
+.tabs{display:flex;gap:4px;padding:6px;position:sticky;top:12px;z-index:5;background:var(--card);border-radius:var(--r)}
+.tabs button{flex:1;border:0;background:transparent;padding:9px 6px;border-radius:10px;font:inherit;font-weight:600;color:var(--ink2);cursor:pointer}
+.tabs button.on{background:#f0fdfa;color:var(--brand)}
+.pane{display:none;margin-top:12px}
+.pane.on{display:block}
+.sec{padding:14px 16px;margin-bottom:12px}
+.sec h3{margin:0 0 8px;font-size:15px}
+.muted{color:var(--ink2)}
+.small{font-size:12px}
+.tiny{font-size:11.5px;color:var(--ink3)}
+.scene{display:grid;grid-template-columns:34px 1fr;gap:10px;padding:12px 0;border-top:1px dashed var(--line)}
+.scene:first-of-type{border-top:0;padding-top:4px}
+.scene .ico{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:18px;background:#f1f5f9}
+.scene b{font-size:14px}
+.link{color:var(--brand);cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.store{padding:12px 14px;margin-bottom:10px;cursor:pointer;transition:border-color .15s, box-shadow .15s}
+.store.sel{border-color:var(--brand2);box-shadow:0 0 0 3px rgba(20,184,166,.18)}
+.store .top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.store .nm{font-weight:700;font-size:14.5px}
+.meta{display:flex;flex-wrap:wrap;gap:6px 10px;color:var(--ink2);font-size:12.5px;margin-top:4px}
+.tag{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;padding:1px 8px;border-radius:999px;background:#f1f5f9;color:var(--ink2);white-space:nowrap}
+.tier{font-weight:700;font-size:11.5px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.t1{background:#dcfce7;color:#166534}.t2{background:#fef9c3;color:#854d0e}.t3{background:#ffedd5;color:#9a3412}.t4{background:#fee2e2;color:#991b1b}.t0{background:#f1f5f9;color:#475569}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:6px 10px;font:inherit;font-size:12.5px;cursor:pointer;text-decoration:none}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn:active{transform:translateY(1px)}
+.toolbar{display:flex;gap:8px;margin-bottom:10px}
+.toolbar input,.toolbar select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;min-width:0}
+.toolbar input{flex:1}
+/* calculator */
+.ctl{display:grid;grid-template-columns:1fr auto;gap:4px 12px;align-items:center;margin:8px 0}
+.ctl input[type=range]{grid-column:1/3;width:100%;accent-color:var(--brand)}
+.ctl output{font-weight:700;color:var(--brand)}
+.checks{display:flex;gap:14px;flex-wrap:wrap;margin-top:6px}
+.checks label{display:flex;align-items:center;gap:6px;cursor:pointer}
+.rank{margin-top:8px}
+.row{display:grid;grid-template-columns:22px minmax(0,1fr) 72px;gap:8px;align-items:center;padding:7px 0;border-top:1px solid #f1f5f9;cursor:pointer}
+.row .n{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{height:8px;border-radius:6px;background:#f1f5f9;position:relative;overflow:hidden;margin-top:4px;display:flex}
+.bar i{display:block;height:100%}
+.bar .g{background:#14b8a6}.bar .tm{background:#cbd5e1}
+.bar .est{background:repeating-linear-gradient(45deg,#f59e0b,#f59e0b 4px,#fcd34d 4px,#fcd34d 8px)}
+.row .v{text-align:right;font-weight:700}
+.row .rk{color:var(--ink3);font-weight:700;text-align:center}
+.row.best .rk{color:#fff;background:var(--good);border-radius:6px}
+.summary{background:#f0fdfa;border:1px solid #99f6e4;border-radius:12px;padding:10px 12px;margin-top:10px}
+.idx{display:grid;grid-template-columns:150px 1fr 54px;gap:8px;align-items:center;font-size:12.5px;padding:3px 0}
+.idx .b{height:12px;border-radius:4px;background:#e2e8f0;overflow:hidden}
+.idx .b i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#0f766e)}
+.idx.hi .b i{background:linear-gradient(90deg,#f59e0b,#dc2626)}
+.note{border-left:3px solid #f59e0b;background:#fffbeb;padding:8px 10px;border-radius:0 8px 8px 0;font-size:12.5px;color:#78350f;margin-top:8px}
+footer{max-width:1440px;margin:0 auto;padding:0 20px 30px;color:var(--ink3);font-size:12px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#0f172a;color:#fff;padding:8px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:99}
+.toast.on{opacity:.95}
+.modal{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal .box{background:#fff;border-radius:14px;max-width:460px;padding:18px 18px 14px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+svg text{font-family:inherit}
+@media (max-width:900px){
+  header{padding:14px 14px 8px}
+  header h1{font-size:19px}
+  .layout{grid-template-columns:1fr;padding:0 10px 20px;gap:10px}
+  #mapCard{position:relative;top:0;height:58vh;min-height:400px}
+  .tabs{top:0}
+  .legend{display:none}
+  .idx{grid-template-columns:118px 1fr 48px}
+}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏠 Piccadilly Court 周边采购地图</h1>
+  <div class="sub">
+    <span>中心：Piccadilly Court · 457-463 Caledonian Rd, London N7 9BJ</span>
+    <span class="pill" id="statPill">—</span>
+    <span class="tiny">数据更新：2026-10-03</span>
+  </div>
+</header>
+
+<div class="layout">
+  <!-- MAP -->
+  <section class="card" id="mapCard">
+    <div class="mapbar">
+      <div class="seg" id="zoomSeg">
+        <button data-r="650">近 · 600m</button>
+        <button data-r="1250" class="on">中 · 1.2km</button>
+        <button data-r="2250">远 · 2.2km</button>
+      </div>
+      <div class="seg" id="baseSeg">
+        <button data-b="svg" class="on">距离示意图</button>
+        <button data-b="tmap">腾讯地图底图</button>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div id="mapArea">
+      <svg id="svg" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="以住处为中心的门店距离示意图"></svg>
+      <div id="tmap"></div>
+      <div class="legend" id="legend"></div>
+      <div id="pop"></div>
+    </div>
+  </section>
+
+  <!-- PANEL -->
+  <section id="panel">
+    <div class="tabs card">
+      <button data-t="rec" class="on">场景推荐</button>
+      <button data-t="list">门店清单</button>
+      <button data-t="calc">性价比分析</button>
+    </div>
+
+    <!-- 推荐 -->
+    <div class="pane on" id="pane-rec">
+      <div class="card sec">
+        <h3>一句话结论</h3>
+        <div class="muted">每周大采购去 <span class="link" data-go="n12291675968">Aldi Holloway Road</span>（步行约 11 分钟）；楼下 <span class="link" data-go="n2533273380">Sainsbury's Local</span> 只做应急；中餐食材去 <span class="link" data-go="n4457290490">兴业 Hing Yip</span>；周末一站式去 <span class="link" data-go="w233810156">Nag's Head 商圈</span>。</div>
+        <div class="tiny" style="margin-top:6px">依据：Which? 2026 年 8 月 92 件商品价格对比 + Which? 便利店溢价调查 + 本页步行距离估算。详见「性价比分析」。</div>
+      </div>
+      <div class="card sec" id="scenes"></div>
+      <div class="card sec">
+        <h3>省钱小贴士</h3>
+        <ul class="muted" style="margin:0;padding-left:18px">
+          <li><b>会员卡全办上</b>：Tesco Clubcard、Sainsbury's Nectar、Lidl Plus 都免费，App 即可。Tesco / Sainsbury's 的会员价能让同一篮子便宜约 3–5%。</li>
+          <li><b>便利店型门店更贵</b>：Which? 调查显示同一品牌 Tesco Express 比大店贵约 11%，Sainsbury's Local 贵约 14%。</li>
+          <li><b>周日营业时间短</b>：英国大型超市周日最多营业 6 小时，Aldi / Lidl 周日为 11:00–17:00。</li>
+          <li><b>傍晚找黄色折扣贴</b>（reduced 标签），临期面包、熟食常打 3–7 折；也可试试 Too Good To Go 等剩食 App。</li>
+          <li><b>大件 / 重物</b>（米、油、饮料）可选超市线上配送，凑满起送额通常比多次拎回来划算。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 清单 -->
+    <div class="pane" id="pane-list">
+      <div class="toolbar">
+        <input id="q" type="search" placeholder="搜索门店 / 街道 / 品类，如 Aldi、饺子、药">
+        <select id="sort">
+          <option value="d">按距离</option>
+          <option value="p">按价格指数</option>
+          <option value="t">按综合成本</option>
+        </select>
+      </div>
+      <div id="list"></div>
+    </div>
+
+    <!-- 性价比 -->
+    <div class="pane" id="pane-calc">
+      <div class="card sec">
+        <h3>每次采购的「真实成本」</h3>
+        <div class="muted small">真实成本 = 商品价（按 Aldi 价格折算的篮子 × 门店价格指数）+ 往返步行时间 × 你的时间价值。拖动滑块看排名变化。</div>
+        <div class="ctl"><label for="basket">一次采购的篮子（按 Aldi 价计）</label><output id="basketO"></output><input id="basket" type="range" min="10" max="120" step="5" value="35"></div>
+        <div class="ctl"><label for="tv">你的时间价值（每小时）</label><output id="tvO"></output><input id="tv" type="range" min="0" max="30" step="1" value="10"></div>
+        <div class="ctl"><label for="freq">每周采购次数</label><output id="freqO"></output><input id="freq" type="range" min="1" max="5" step="1" value="1"></div>
+        <div class="checks">
+          <label><input type="checkbox" id="cc" checked> 有 Tesco Clubcard</label>
+          <label><input type="checkbox" id="nc" checked> 有 Sainsbury's Nectar</label>
+        </div>
+        <div class="summary" id="sum"></div>
+        <div class="rank" id="rank"></div>
+        <div class="tiny" style="margin-top:6px">
+          <span style="display:inline-block;width:10px;height:8px;background:#14b8a6;border-radius:2px"></span> 商品价
+          <span style="display:inline-block;width:10px;height:8px;background:#cbd5e1;border-radius:2px;margin-left:8px"></span> 时间成本
+          <span style="display:inline-block;width:10px;height:8px;background:repeating-linear-gradient(45deg,#f59e0b,#f59e0b 3px,#fcd34d 3px,#fcd34d 6px);border-radius:2px;margin-left:8px"></span> 指数为估计值
+        </div>
+      </div>
+
+      <div class="card sec">
+        <h3>价格指数（Aldi = 100）</h3>
+        <div class="muted small" style="margin-bottom:6px">Which? 2026 年 8 月：同一篮子 92 件常见商品在各超市的月均总价。</div>
+        <div id="idxChart"></div>
+        <div class="note">本页门店的指数换算规则：大店直接采用 Which? 数据；Tesco Express / Sainsbury's Local 按 Which? 便利店调查的溢价（+11% / +14%）推算；Co-op、M&S、Little Waitrose、独立便利店暂无同口径公开数据，按便利店溢价区间<b>估算</b>（图中以斜纹标出），仅供参考。亚洲超市、市集、药妆、家居类不参与指数比较。</div>
+      </div>
+
+      <div class="card sec">
+        <h3>距离 × 价格 四象限</h3>
+        <div class="muted small">越靠左下越「又近又便宜」。点击圆点查看门店。</div>
+        <svg id="quad" viewBox="0 0 420 280" style="width:100%;height:auto;margin-top:6px"></svg>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div><b>关于导航：</b>每个门店都提供「高德地图」「腾讯地图」步行导航链接及「复制地址」（可粘贴到你手机上常用的导航 App）。海外地区路线规划的覆盖程度以各 App 实际为准。</div>
+  <div style="margin-top:6px"><b>数据来源：</b>门店位置 © OpenStreetMap contributors（ODbL，2026-10-03 抓取）；价格指数 Which? Cheapest Supermarkets（2026 年 8 月，92 件）；便利店溢价 Which? 便利店价格调查（42 件）。营业时间仅部分经官网核实，出发前请以门店官网为准。步行时间 = 直线距离 × 1.3 ÷ 80 m/min，为估算值。</div>
+</footer>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="box">
+  <h3 style="margin:0 0 8px">启用腾讯地图底图</h3>
+  <div class="muted small">本站默认使用自绘的「距离示意图」，无需任何地图 key 即可使用全部功能。若需真实街道底图：</div>
+  <ol class="small" style="padding-left:18px;margin:8px 0">
+    <li>前往腾讯位置服务开放平台 <a href="https://lbs.qq.com" target="_blank" rel="noopener">lbs.qq.com</a> 注册并在控制台「应用管理」创建 key（勾选 WebServiceAPI / JavaScript API GL）。</li>
+    <li>为 key 配置 <b>Referer 域名白名单</b>（填写本站域名），防止被盗用。</li>
+    <li>打开站点目录中的 <code>config.js</code>，把占位符替换为你的 key，重新发布即可。</li>
+  </ol>
+  <div style="text-align:right"><button class="btn pri" onclick="document.getElementById('modal').style.display='none'">知道了</button></div>
+</div></div>
+
+<script src="config.js"></script>
+<script src="data.js"></script>
+<script>
+(function(){
+const H = window.HOME, S = window.STORES, LM = window.LANDMARKS;
+const CATS = {
+  grocery:{n:'大型超市',c:'#16a34a',i:'🛒'}, conv:{n:'便利补货',c:'#0284c7',i:'🏪'}, asian:{n:'亚洲/国际食材',c:'#dc2626',i:'🥢'},
+  frozen:{n:'冷冻食品',c:'#4f46e5',i:'🧊'}, market:{n:'市集',c:'#d97706',i:'🧺'}, health:{n:'药妆',c:'#db2777',i:'💊'},
+  home:{n:'家居/百元店',c:'#7c3aed',i:'🧹'}, clothes:{n:'服饰/慈善店',c:'#0d9488',i:'👕'}, service:{n:'邮局',c:'#64748b',i:'📮'},
+  hub:{n:'商圈',c:'#111827',i:'📍'}
+};
+// Which? Aug 2026 (92 items): Aldi 159.36; Lidl 161.10; Sainsbury's+Nectar 185.55; Tesco+Clubcard 189.45; Tesco 192.97; Morrisons 194.11; Sainsbury's 195.33; Waitrose 223.75
+const PRICE = {
+  aldi:{idx:100,src:'w',label:'Aldi'}, lidl:{idx:101.1,src:'w',label:'Lidl'}, morrisons:{idx:121.8,src:'w',label:'Morrisons'},
+  sainsburys:{idx:122.6,card:116.4,cardKey:'nc',src:'w',label:"Sainsbury's"}, waitrose:{idx:140.4,src:'w',label:'Waitrose'},
+  tesco_express:{idx:143.0,card:132.0,cardKey:'cc',src:'d',label:'Tesco Express'}, sainsburys_local:{idx:132.7,src:'d',label:"Sainsbury's Local"},
+  coop:{idx:135,src:'e',label:'Co-op'}, indep:{idx:140,src:'e',label:'独立便利店'}, mands:{idx:140,src:'e',label:'M&S Food'}, waitrose_little:{idx:145,src:'e',label:'Little Waitrose'}
+};
+const KEY_LABELS = new Set(['n12291675968','n4457290490','n2533273380','n2687082149','w233810156','w30850331','w32826154','n10068538759','w30475080','w239435039']);
+const state = {R:1250, cats:new Set(Object.keys(CATS)), sel:null, base:'svg', tab:'rec'};
+const $ = s=>document.querySelector(s), $$ = s=>Array.from(document.querySelectorAll(s));
+const walk = d => Math.max(1, Math.round(d*1.3/80));
+const cosLat = Math.cos(H.lat*Math.PI/180);
+const proj = (lat,lon)=>[(lon-H.lon)*cosLat*111320, -(lat-H.lat)*110574];
+const byId = Object.fromEntries(S.map(s=>[s.id,s]));
+const esc = t => String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function cards(){ return {cc:$('#cc').checked, nc:$('#nc').checked}; }
+function idxOf(s){ const p=PRICE[s.price]; if(!p) return null; const c=cards(); return (p.card && c[p.cardKey]) ? p.card : p.idx; }
+function tier(s){
+  const v=idxOf(s); if(v==null) return {cls:'t0',t:s.cat==='asian'?'专项食材':s.cat==='frozen'?'冷冻专项':'不比价'};
+  const est = PRICE[s.price].src==='e' ? '≈' : '';
+  if(v<=105) return {cls:'t1',t:`£ 最便宜 · ${est}${Math.round(v)}`};
+  if(v<=125) return {cls:'t2',t:`££ 中档 · ${est}${Math.round(v)}`};
+  if(v<=138) return {cls:'t3',t:`£££ 偏贵 · ${est}${Math.round(v)}`};
+  return {cls:'t4',t:`££££ 贵 · ${est}${Math.round(v)}`};
+}
+function totalCost(s){
+  const v=idxOf(s); if(v==null) return null;
+  const basket=+$('#basket').value, tv=+$('#tv').value;
+  const goods=basket*v/100, time=2*walk(s.d)/60*tv;
+  return {goods,time,total:goods+time,v};
+}
+// ---------- navigation ----------
+function amapUrl(s){ return 'https://uri.amap.com/navigation?from='+H.lon+','+H.lat+','+encodeURIComponent(H.name)+'&to='+s.lon+','+s.lat+','+encodeURIComponent(s.name)+'&mode=walk&coordinate=wgs84&callnative=1&src=piccadilly-shopmap'; }
+function qqUrl(s){ return 'https://apis.map.qq.com/uri/v1/routeplan?type=walk&from='+encodeURIComponent(H.name)+'&fromcoord='+H.lat+','+H.lon+'&to='+encodeURIComponent(s.name)+'&tocoord='+s.lat+','+s.lon+'&referer=piccadilly-shopmap'; }
+function navBtns(s){
+  return `<div class="btns">
+    <a class="btn pri" href="${amapUrl(s)}" target="_blank" rel="noopener">🧭 高德步行导航</a>
+    <a class="btn" href="${qqUrl(s)}" target="_blank" rel="noopener">🗺️ 腾讯地图导航</a>
+    <button class="btn" data-copy="${esc(s.name+', '+s.addr+', London')}">📋 复制地址</button>
+    <button class="btn" data-copy="${s.lat}, ${s.lon}">📍 复制坐标</button>
+  </div>`;
+}
+function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1600); }
+function copy(t){
+  const ok=()=>toast('已复制：'+t);
+  if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(t).then(ok,()=>fallback()); } else fallback();
+  function fallback(){ const ta=document.createElement('textarea'); ta.value=t; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); try{document.execCommand('copy'); ok();}catch(e){toast('复制失败，请手动复制');} ta.remove(); }
+}
+document.addEventListener('click',e=>{
+  const c=e.target.closest('[data-copy]'); if(c){ e.stopPropagation(); copy(c.getAttribute('data-copy')); return; }
+  const g=e.target.closest('[data-go]'); if(g){ select(g.getAttribute('data-go'), true); }
+});
+// ---------- chips & legend ----------
+function renderChips(){
+  const cnt={}; S.forEach(s=>cnt[s.cat]=(cnt[s.cat]||0)+1);
+  const all = state.cats.size===Object.keys(CATS).length;
+  $('#chips').innerHTML = `<button class="chip ${all?'on':''}" data-cat="__all">全部 ${S.length}</button>` +
+    Object.entries(CATS).map(([k,v])=>`<button class="chip ${!all&&state.cats.has(k)?'on':''}" data-cat="${k}"><span class="dot" style="background:${v.c}"></span>${v.n} ${cnt[k]||0}</button>`).join('');
+  $('#legend').innerHTML = Object.entries(CATS).map(([k,v])=>`<div><span class="dot" style="background:${v.c}"></span>${v.n}</div>`).join('') + `<div style="margin-top:4px;color:#64748b">▢ 地铁/火车站</div>`;
+}
+$('#chips').addEventListener('click',e=>{
+  const b=e.target.closest('[data-cat]'); if(!b) return; const k=b.dataset.cat;
+  const allKeys=Object.keys(CATS), all=state.cats.size===allKeys.length;
+  if(k==='__all'){ state.cats=new Set(allKeys); }
+  else if(all){ state.cats=new Set([k]); }
+  else { state.cats.has(k)?state.cats.delete(k):state.cats.add(k); if(!state.cats.size) state.cats=new Set(allKeys); }
+  renderChips(); renderMap(); renderList(); updateTMap();
+});
+const visible = ()=>S.filter(s=>state.cats.has(s.cat));
+// ---------- SVG map ----------
+function renderMap(){
+  const svg=$('#svg'), box=$('#mapArea').getBoundingClientRect();
+  const w=Math.max(box.width,200), h=Math.max(box.height,200), R=state.R;
+  const k = R/(Math.min(w,h)/2);           // metres per px
+  const vw=w*k, vh=h*k;
+  svg.setAttribute('viewBox', `${-vw/2} ${-vh/2} ${vw} ${vh}`);
+  const px=v=>v*k; let o='';
+  // rings
+  const step = R<=700?200:500;
+  for(let r=step;r<=Math.max(vw,vh);r+=step){
+    o+=`<circle cx="0" cy="0" r="${r}" fill="none" stroke="${r%1000===0?'#cbd5e1':'#e2e8f0'}" stroke-width="${px(1)}" stroke-dasharray="${px(4)} ${px(4)}"/>`;
+    o+=`<text x="${-r*0.766}" y="${r*0.643+px(12)}" font-size="${px(11)}" fill="#94a3b8" text-anchor="middle" stroke="#fff" stroke-width="${px(3)}" paint-order="stroke">${r>=1000?(r/1000)+'km':r+'m'} · 步行约${walk(r)}分钟</text>`;
+  }
+  // compass
+  o+=`<g transform="translate(${vw/2-px(28)},${-vh/2+px(32)})"><circle r="${px(15)}" fill="#fff" stroke="#e2e8f0" stroke-width="${px(1)}"/><path d="M0 ${-px(11)} L${px(5)} ${px(4)} L0 ${px(1)} L${-px(5)} ${px(4)}Z" fill="#0f172a"/><text y="${px(12)}" font-size="${px(9)}" text-anchor="middle" fill="#475569">N</text></g>`;
+  // landmarks
+  LM.forEach(l=>{ const [x,y]=proj(l.lat,l.lon); const s=px(7);
+    o+=`<rect x="${x-s/2}" y="${y-s/2}" width="${s}" height="${s}" rx="${px(1.5)}" fill="#fff" stroke="#64748b" stroke-width="${px(1.5)}"/>`;
+    o+=`<text x="${x+px(7)}" y="${y+px(4)}" font-size="${px(10.5)}" fill="#64748b" font-style="italic">${esc(l.n)}</text>`; });
+  // stores
+  const vs=visible().slice().sort((a,b)=>(a.id===state.sel)-(b.id===state.sel));
+  vs.forEach(s=>{
+    const [x,y]=proj(s.lat,s.lon), c=CATS[s.cat].c, sel=s.id===state.sel;
+    const r=px(sel?10:(s.cat==='hub'?8:6.5));
+    if(sel) o+=`<circle cx="${x}" cy="${y}" r="${px(18)}" fill="${c}" opacity=".18"/>`;
+    o+=`<circle class="mk" data-id="${s.id}" cx="${x}" cy="${y}" r="${r}" fill="${c}" stroke="#fff" stroke-width="${px(2)}" style="cursor:pointer"/>`;
+    if(sel || KEY_LABELS.has(s.id)){
+      const fs=px(sel?13:11.5);
+      o+=`<text x="${x+px(10)}" y="${y+px(4)}" font-size="${fs}" font-weight="${sel?700:600}" fill="#0f172a" stroke="#fff" stroke-width="${px(3)}" paint-order="stroke" style="pointer-events:none">${esc(s.name)}</text>`;
+    }
+  });
+  // home
+  o+=`<g style="pointer-events:none"><circle r="${px(16)}" fill="#0f766e" opacity=".15"/><circle r="${px(11)}" fill="#0f766e" stroke="#fff" stroke-width="${px(2.5)}"/>
+      <path d="M${-px(5)} ${px(1)} L0 ${-px(5)} L${px(5)} ${px(1)} V${px(5)} H${-px(5)}Z" fill="#fff"/>
+      <text y="${px(28)}" text-anchor="middle" font-size="${px(12.5)}" font-weight="700" fill="#0f766e" stroke="#fff" stroke-width="${px(3)}" paint-order="stroke">家 · Piccadilly Court</text></g>`;
+  svg.innerHTML=o;
+}
+$('#svg').addEventListener('click',e=>{ const m=e.target.closest('.mk'); if(m) select(m.dataset.id,false); else { state.sel=null; $('#pop').style.display='none'; renderMap(); markList(); } });
+$('#zoomSeg').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; $$('#zoomSeg button').forEach(x=>x.classList.toggle('on',x===b)); state.R=+b.dataset.r; renderMap(); });
+window.addEventListener('resize',()=>{ clearTimeout(renderMap._t); renderMap._t=setTimeout(renderMap,120); });
+// ---------- selection ----------
+function storeDetail(s){
+  const t=tier(s);
+  return `<div class="top"><div><div class="nm">${esc(s.name)}</div>
+    <div class="meta"><span class="tag"><span class="dot" style="background:${CATS[s.cat].c}"></span>${CATS[s.cat].n}</span>
+    <span>📏 ${s.d>=1000?(s.d/1000).toFixed(2)+' km':s.d+' m'}</span><span>🚶 约 ${walk(s.d)} 分钟</span></div></div>
+    <span class="tier ${t.cls}">${t.t}</span></div>
+    <div class="meta">📍 ${esc(s.addr)}</div>
+    ${s.hours?`<div class="meta">🕘 ${esc(s.hours)}</div>`:''}
+    ${s.note?`<div class="meta" style="color:#0f172a">💡 ${esc(s.note)}</div>`:''}`;
+}
+function select(id, fromPanel){
+  const s=byId[id]; if(!s) return;
+  if(!state.cats.has(s.cat)){ state.cats.add(s.cat); renderChips(); }
+  state.sel=id;
+  // auto-zoom so the store fits
+  const need = s.d<=550?650:s.d<=1150?1250:2250;
+  if(need>state.R){ state.R=need; $$('#zoomSeg button').forEach(x=>x.classList.toggle('on',+x.dataset.r===need)); }
+  renderMap(); markList();
+  const pop=$('#pop'); pop.innerHTML=`<button class="x" aria-label="关闭">×</button>`+storeDetail(s)+navBtns(s); pop.style.display='block';
+  pop.querySelector('.x').onclick=()=>{ pop.style.display='none'; state.sel=null; renderMap(); markList(); };
+  if(state.base==='tmap' && tmap){ tmap.setCenter(new TMap.LatLng(s.lat,s.lon)); }
+  if(fromPanel && window.innerWidth<=900) $('#mapCard').scrollIntoView({behavior:'smooth',block:'start'});
+}
+// ---------- list ----------
+function renderList(){
+  const q=$('#q').value.trim().toLowerCase(), sort=$('#sort').value;
+  let arr=visible().filter(s=>!q || (s.name+' '+s.addr+' '+(s.note||'')+' '+CATS[s.cat].n).toLowerCase().includes(q));
+  const pv=s=>{const v=idxOf(s);return v==null?999:v;}, tv=s=>{const t=totalCost(s);return t?t.total:9999;};
+  arr.sort(sort==='p'?(a,b)=>pv(a)-pv(b)||a.d-b.d: sort==='t'?(a,b)=>tv(a)-tv(b)||a.d-b.d:(a,b)=>a.d-b.d);
+  $('#list').innerHTML = arr.length? arr.map(s=>`<div class="card store ${s.id===state.sel?'sel':''}" data-sid="${s.id}">${storeDetail(s)}${navBtns(s)}</div>`).join('') : '<div class="muted card sec">没有匹配的门店</div>';
+}
+function markList(){ $$('#list .store').forEach(el=>el.classList.toggle('sel',el.dataset.sid===state.sel)); if(state.tab==='list'&&state.sel){ const el=document.querySelector(`#list [data-sid="${state.sel}"]`); if(el && window.innerWidth>900) el.scrollIntoView({behavior:'smooth',block:'nearest'}); } }
+$('#list').addEventListener('click',e=>{ if(e.target.closest('a,button')) return; const c=e.target.closest('.store'); if(c) select(c.dataset.sid,true); });
+$('#q').addEventListener('input',renderList); $('#sort').addEventListener('change',renderList);
+// ---------- tabs ----------
+$('.tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return; state.tab=b.dataset.t; $$('.tabs button').forEach(x=>x.classList.toggle('on',x===b)); $$('.pane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+state.tab)); });
+// ---------- scenes ----------
+const SCENES=[
+ ['🛒','每周大采购','n12291675968','首选 Aldi Holloway Road：Which? 2026 年每月最便宜，离家约 670m。沿 Caledonian Rd 北行转 Holloway Rd 即到。备选：',[['n3780741648','Lidl（Nag\'s Head）']]],
+ ['🌙','楼下应急 / 深夜','n2533273380','Sainsbury\'s Local 走 1 分钟；Tesco Express Cottage Rd 07–23 点；半夜只有 24 小时的 Nisa Local。牛奶面包可以，整周采购别在这买（贵 3–4 成）。',[['n2687082149','Tesco Express'],['n2415097541','Nisa Local 24h']]],
+ ['🥢','中餐 / 亚洲食材','n4457290490','兴业 Hing Yip（88-90 Holloway Rd）是最近的中式超市：酱油醋、冻饺子、火锅底料、活海鲜。想买韩国货去 Angel 的 Oseyo；东南亚食材去 Camden 的 Longdan。',[['n2025485255','Oseyo Angel'],['w451480067','Longdan']]],
+ ['🛍️','周末一站式','w233810156','Nag\'s Head 商圈：Lidl、Morrisons、Iceland、Boots、Superdrug、B&Q、Selbys 百货、百元店和 Nag\'s Head Market 都在 300m 内，一趟买齐。',[['n3780741648','Lidl'],['w30850333','Morrisons'],['w233810154','Iceland']]],
+ ['🧹','入住添置','n1445660978','床品毛巾锅碗：Selbys 百货 / Holloway Household / 百元店；工具五金：Toolstation（4 分钟，网上下单到店取）；收纳灯泡：B&Q；品牌折扣：TK Maxx Camden。',[['n10068538759','Toolstation'],['w58711941','B&Q'],['w465305584','Paradise 百元店']]],
+ ['🥬','便宜果蔬','w239435039','Angel 的 Chapel Market 街市水果蔬菜论碗卖，接近收摊更便宜；Nag\'s Head Market 也可顺路逛。',[['w30476618','Nag\'s Head Market']]],
+ ['💊','药品 / 日化','n10068538756','小病买药：Caledonian Pharmacy（5 分钟）。洗护日化：Superdrug 常比 Boots 便宜，两家都在 Nag\'s Head。',[['w231280966','Superdrug'],['w481694388','Boots']]],
+ ['📮','寄件 / 退货','w358716219','Caledonian Road Post Office（320 Caledonian Rd）或 Holloway Road Post Office（118 Holloway Rd），距离都在 850m 内。',[['n362323822','Holloway Road PO']]],
+];
+$('#scenes').innerHTML='<h3>按场景去哪买</h3>'+SCENES.map(([i,t,id,txt,alts])=>{
+  const s=byId[id];
+  return `<div class="scene"><div class="ico">${i}</div><div><b>${t}</b> → <span class="link" data-go="${id}">${esc(s.name)}</span> <span class="tiny">· ${s.d>=1000?(s.d/1000).toFixed(1)+'km':s.d+'m'} · 步行约${walk(s.d)}分钟</span>
+  <div class="muted small" style="margin-top:2px">${esc(txt)}${alts.map(([a,n])=>` <span class="link" data-go="${a}">${esc(n)}</span>`).join(' ·')}</div>
+  <div class="btns" style="margin-top:6px"><a class="btn pri" href="${amapUrl(s)}" target="_blank" rel="noopener">🧭 导航去 ${esc(s.name.split('（')[0])}</a></div></div></div>`;
+}).join('');
+// ---------- calculator ----------
+function renderCalc(){
+  const basket=+$('#basket').value, tv=+$('#tv').value, freq=+$('#freq').value;
+  $('#basketO').textContent='£'+basket; $('#tvO').textContent='£'+tv+'/h'; $('#freqO').textContent=freq+' 次';
+  const arr=S.filter(s=>PRICE[s.price] && (s.cat==='grocery'||s.cat==='conv')).map(s=>({s,c:totalCost(s)})).sort((a,b)=>a.c.total-b.c.total);
+  const max=Math.max(...arr.map(a=>a.c.total));
+  $('#rank').innerHTML=arr.map((a,i)=>{ const est=PRICE[a.s.price].src==='e';
+    return `<div class="row ${i===0?'best':''}" data-go="${a.s.id}"><div class="rk">${i+1}</div>
+    <div><div class="n">${esc(a.s.name)} <span class="tiny">· ${walk(a.s.d)}分钟 · 指数${est?'≈':''}${Math.round(a.c.v)}</span></div>
+    <div class="bar"><i class="${est?'est':'g'}" style="width:${a.c.goods/max*100}%"></i><i class="tm" style="width:${a.c.time/max*100}%"></i></div></div>
+    <div class="v">£${a.c.total.toFixed(2)}</div></div>`; }).join('');
+  const best=arr[0], near=arr.find(a=>a.s.id==='n2533273380'), month=4.33*freq;
+  const save=near?(near.c.total-best.c.total):0;
+  $('#sum').innerHTML=`<b>最划算：<span class="link" data-go="${best.s.id}">${esc(best.s.name)}</span></b>，每次约 £${best.c.total.toFixed(2)}（商品 £${best.c.goods.toFixed(2)} + 时间 £${best.c.time.toFixed(2)}）。<br>
+   相比楼下 Sainsbury's Local，每次省 <b>£${save.toFixed(2)}</b>，按每周 ${freq} 次计<b>每月约省 £${(save*month).toFixed(0)}</b>、每年约 £${(save*52*freq).toFixed(0)}。`;
+  renderQuad(); if(state.tab==='list') renderList();
+}
+['basket','tv','freq','cc','nc'].forEach(id=>$('#'+id).addEventListener('input',()=>{renderCalc(); renderList();}));
+// Which? chart
+const WHICH=[['Aldi',159.36],['Lidl',161.10],['Asda',185.21],["Sainsbury's（Nectar 价）",185.55],['Tesco（Clubcard 价）',189.45],['Tesco',192.97],['Morrisons',194.11],["Sainsbury's",195.33],['Ocado',207.62],['Waitrose',223.75]];
+$('#idxChart').innerHTML=WHICH.map(([n,v])=>{ const ix=v/159.36*100; return `<div class="idx ${ix>130?'hi':''}"><div>${n} <span class="tiny">£${v.toFixed(2)}</span></div><div class="b"><i style="width:${(ix-80)/(145-80)*100}%"></i></div><b>${ix.toFixed(0)}</b></div>`; }).join('')+
+ `<div class="tiny" style="margin-top:4px">换算：同篮子在 Waitrose 比 Aldi 贵 40%；Asda 附近 2km 内无门店。</div>`;
+function renderQuad(){
+  const arr=S.filter(s=>PRICE[s.price] && (s.cat==='grocery'||s.cat==='conv'));
+  const W=420,Hh=280,L=44,B=34,T=12,Rr=12, dmax=2100, imin=95, imax=150;
+  const X=d=>L+(d/dmax)*(W-L-Rr), Y=v=>T+(1-(v-imin)/(imax-imin))*(Hh-T-B);
+  let o=`<rect x="${L}" y="${T}" width="${W-L-Rr}" height="${Hh-T-B}" fill="#fafafa" stroke="#e5e7eb"/>`;
+  o+=`<rect x="${L}" y="${Y(112)}" width="${X(900)-L}" height="${Hh-B-Y(112)}" fill="#dcfce7" opacity=".7"/><text x="${L+4}" y="${Hh-B-6}" font-size="10" fill="#166534">又近又便宜</text>`;
+  [0,500,1000,1500,2000].forEach(d=>o+=`<text x="${X(d)}" y="${Hh-B+14}" font-size="10" text-anchor="middle" fill="#64748b">${d>=1000?d/1000+'km':d+'m'}</text>`);
+  [100,115,130,145].forEach(v=>o+=`<text x="${L-6}" y="${Y(v)+3}" font-size="10" text-anchor="end" fill="#64748b">${v}</text><line x1="${L}" x2="${W-Rr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#eef2f7"/>`);
+  o+=`<text x="${(W+L)/2}" y="${Hh-4}" font-size="10.5" text-anchor="middle" fill="#475569">距住处距离</text><text x="10" y="${(Hh-B)/2}" font-size="10.5" fill="#475569" transform="rotate(-90 10 ${(Hh-B)/2})" text-anchor="middle">价格指数</text>`;
+  arr.forEach(s=>{ const v=idxOf(s), est=PRICE[s.price].src==='e';
+    o+=`<circle data-go="${s.id}" cx="${X(s.d)}" cy="${Y(v)}" r="6" fill="${CATS[s.cat].c}" fill-opacity="${est?.45:.9}" stroke="#fff" stroke-width="1.5" style="cursor:pointer"><title>${esc(s.name)} · ${s.d}m · 指数${Math.round(v)}</title></circle>`;
+    if(['n12291675968','n3780741648','n2533273380','w30850333','w30850331','n2687082149'].includes(s.id)) o+=`<text x="${X(s.d)+8}" y="${Y(v)+3}" font-size="10" fill="#0f172a" stroke="#fafafa" stroke-width="3" paint-order="stroke" style="pointer-events:none">${esc(s.name.replace(/（.*）/,''))}</text>`;
+  });
+  $('#quad').innerHTML=o;
+}
+// ---------- optional Tencent basemap ----------
+let tmap=null, tLayer=null;
+const keyOK=()=>/^[A-Za-z0-9-]{20,}$/.test(window.TMAP_KEY||'');
+function dotSrc(c){ return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22"><circle cx="11" cy="11" r="8" fill="${c}" stroke="#fff" stroke-width="3"/></svg>`); }
+function initT(){
+  tmap=new TMap.Map('tmap',{center:new TMap.LatLng(H.lat,H.lon),zoom:15});
+  const styles={home:new TMap.MarkerStyle({width:30,height:30,anchor:{x:15,y:15},src:dotSrc('#0f766e')})};
+  Object.entries(CATS).forEach(([k,v])=>styles[k]=new TMap.MarkerStyle({width:22,height:22,anchor:{x:11,y:11},src:dotSrc(v.c)}));
+  tLayer=new TMap.MultiMarker({map:tmap,styles,geometries:[]});
+  tLayer.on('click',e=>{ if(e.geometry && e.geometry.id!=='home') select(e.geometry.id,false); });
+  updateTMap();
+}
+function updateTMap(){ if(!tLayer) return; tLayer.setGeometries([{id:'home',styleId:'home',position:new TMap.LatLng(H.lat,H.lon)}].concat(visible().map(s=>({id:s.id,styleId:s.cat,position:new TMap.LatLng(s.lat,s.lon)})))); }
+$('#baseSeg').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.b==='tmap' && !keyOK()){ $('#modal').style.display='flex'; return; }
+  state.base=b.dataset.b; $$('#baseSeg button').forEach(x=>x.classList.toggle('on',x===b));
+  const t=state.base==='tmap'; $('#tmap').style.display=t?'block':'none'; $('#svg').style.display=t?'none':'block'; $('#zoomSeg').style.visibility=t?'hidden':'visible';
+  if(t && !tmap){ if(window.TMap) initT(); else { const sc=document.createElement('script'); sc.src='https://map.qq.com/api/gljs?v=1.exp&key='+encodeURIComponent(window.TMAP_KEY); sc.onload=initT; sc.onerror=()=>toast('腾讯地图加载失败，请检查 key 与域名白名单'); document.head.appendChild(sc);} }
+});
+$('#modal').addEventListener('click',e=>{ if(e.target.id==='modal') e.currentTarget.style.display='none'; });
+// ---------- init ----------
+$('#statPill').textContent=`${S.length} 个采购点 · 2.2 km 内 · 最近超市步行 1 分钟`;
+renderChips(); renderCalc(); renderList(); requestAnimationFrame(renderMap);
+const h0=location.hash.slice(1); if(['rec','list','calc'].includes(h0)) document.querySelector(`.tabs [data-t="${h0}"]`).click();
+})();
+</script>
+</body>
+</html>

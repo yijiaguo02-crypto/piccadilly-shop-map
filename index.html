@@ -67,6 +67,12 @@ header .sub{color:var(--ink2);margin-top:4px;display:flex;flex-wrap:wrap;gap:6px
 .btn{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink);border-radius:9px;padding:6px 10px;font:inherit;font-size:12.5px;cursor:pointer;text-decoration:none}
 .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
 .btn:active{transform:translateY(1px)}
+.navbox{margin-top:10px}
+.modeSeg{display:flex;width:100%}
+.modeSeg button{flex:1;min-width:0;white-space:nowrap;display:flex;flex-direction:column;align-items:center;line-height:1.25;padding:5px 2px}
+.modeSeg .eta{font-size:10.5px;color:var(--ink3);font-weight:400}
+.modeSeg button.on .eta{color:var(--brand)}
+.navbox .btns{margin-top:8px}
 .toolbar{display:flex;gap:8px;margin-bottom:10px}
 .toolbar input,.toolbar select{font:inherit;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:#fff;min-width:0}
 .toolbar input{flex:1}
@@ -221,7 +227,7 @@ svg text{font-family:inherit}
 </div>
 
 <footer>
-  <div><b>关于导航：</b>每个门店都提供「高德地图」「腾讯地图」步行导航链接及「复制地址」（可粘贴到你手机上常用的导航 App）。海外地区路线规划的覆盖程度以各 App 实际为准。</div>
+  <div><b>关于导航：</b>可选 步行 / 公交 / 骑行 / 驾车，点击后直接唤起手机上的高德、腾讯或百度地图 App 规划路线（请在手机上打开本页）。这些服务的<b>网页版</b>不支持英国路线，App 对伦敦的覆盖以实际为准；如 App 无法规划，可用「复制地址 / 坐标」粘贴到你常用的导航 App。按钮下方的时间为估算：步行 80 m/min、骑行 15 km/h、驾车含 5 分钟停车、公交含 8 分钟候车，均按直线距离 ×1.3–1.4 绕行系数。</div>
   <div style="margin-top:6px"><b>数据来源：</b>门店位置 © OpenStreetMap contributors（ODbL，2026-10-03 抓取）；价格指数 Which? Cheapest Supermarkets（2026 年 8 月，92 件）；便利店溢价 Which? 便利店价格调查（42 件）。营业时间仅部分经官网核实，出发前请以门店官网为准。步行时间 = 直线距离 × 1.3 ÷ 80 m/min，为估算值。</div>
 </footer>
 
@@ -280,15 +286,51 @@ function totalCost(s){
   return {goods,time,total:goods+time,v};
 }
 // ---------- navigation ----------
-function amapUrl(s){ return 'https://uri.amap.com/navigation?from='+H.lon+','+H.lat+','+encodeURIComponent(H.name)+'&to='+s.lon+','+s.lat+','+encodeURIComponent(s.name)+'&mode=walk&coordinate=wgs84&callnative=1&src=piccadilly-shopmap'; }
-function qqUrl(s){ return 'https://apis.map.qq.com/uri/v1/routeplan?type=walk&from='+encodeURIComponent(H.name)+'&fromcoord='+H.lat+','+H.lon+'&to='+encodeURIComponent(s.name)+'&tocoord='+s.lat+','+s.lon+'&referer=piccadilly-shopmap'; }
+// 说明：高德/腾讯/百度的「网页版」路线规划不覆盖英国（实测返回“没有找到对应线路/暂无数据”），
+// 因此这里直接唤起手机 App（URI Scheme），并支持 步行/公交/骑行/驾车 四种方式。
+// 英国不在 GCJ-02 偏移范围内，WGS84 坐标可直接使用。
+const MODES = {
+  walk:{n:'步行',i:'🚶',amap:2,qq:'walk',bd:'walking',eta:d=>Math.round(d*1.3/80)},
+  bus: {n:'公交',i:'🚌',amap:1,qq:'bus', bd:'transit',eta:d=>d<900?null:Math.round(d*1.3/250+8)},
+  bike:{n:'骑行',i:'🚲',amap:3,qq:'bike',bd:'riding', eta:d=>Math.round(d*1.3/250+1)},
+  car: {n:'驾车',i:'🚗',amap:0,qq:'drive',bd:'driving',eta:d=>Math.round(d*1.4/300+5)}
+};
+let navMode = (()=>{ try{ const m=localStorage.getItem('navMode'); return MODES[m]?m:'walk'; }catch(e){ return 'walk'; } })();
+const UA = navigator.userAgent, isIOS=/iPhone|iPad|iPod/i.test(UA)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1), isAndroid=/Android/i.test(UA);
+const isMobile = isIOS||isAndroid;
+function appUrl(app, s, m){
+  const M=MODES[m], hn=encodeURIComponent(H.name), sn=encodeURIComponent(s.name);
+  if(app==='amap'){
+    const q=`sourceApplication=piccadilly-shopmap&slat=${H.lat}&slon=${H.lon}&sname=${hn}&dlat=${s.lat}&dlon=${s.lon}&dname=${sn}&dev=0&t=${M.amap}`;
+    return isIOS ? 'iosamap://path?'+q : 'amapuri://route/plan/?'+q;
+  }
+  if(app==='qq') return `qqmap://map/routeplan?type=${M.qq}&from=${hn}&fromcoord=${H.lat},${H.lon}&to=${sn}&tocoord=${s.lat},${s.lon}&referer=piccadilly-shopmap`;
+  if(app==='bd') return `baidumap://map/direction?origin=${encodeURIComponent('latlng:'+H.lat+','+H.lon+'|name:'+H.name)}&destination=${encodeURIComponent('latlng:'+s.lat+','+s.lon+'|name:'+s.name)}&mode=${M.bd}&coord_type=wgs84&src=${isIOS?'ios':'andr'}.piccadilly.shopmap`;
+}
+const APPS={amap:'高德',qq:'腾讯地图',bd:'百度地图'};
+function openApp(app, id){
+  const s=byId[id]; if(!s) return;
+  if(!isMobile){ toast('请在手机上打开本页再点导航（电脑端无法唤起地图 App）'); return; }
+  const t0=Date.now(); let left=false;
+  const onHide=()=>{ if(document.hidden) left=true; };
+  document.addEventListener('visibilitychange',onHide);
+  location.href=appUrl(app,s,navMode);
+  setTimeout(()=>{ document.removeEventListener('visibilitychange',onHide);
+    if(!left && Date.now()-t0<3500) toast(`没能打开${APPS[app]||'地图'} App：可能未安装。可换一个 App，或复制地址自行导航`);
+  },2200);
+}
+function etaText(m,d){ const v=MODES[m].eta(d); return v==null?(m==='bus'?'步行更快':''):`约${v}分`; }
 function navBtns(s){
-  return `<div class="btns">
-    <a class="btn pri" href="${amapUrl(s)}" target="_blank" rel="noopener">🧭 高德步行导航</a>
-    <a class="btn" href="${qqUrl(s)}" target="_blank" rel="noopener">🗺️ 腾讯地图导航</a>
-    <button class="btn" data-copy="${esc(s.name+', '+s.addr+', London')}">📋 复制地址</button>
-    <button class="btn" data-copy="${s.lat}, ${s.lon}">📍 复制坐标</button>
-  </div>`;
+  const seg=Object.entries(MODES).map(([k,v])=>`<button class="${k===navMode?'on':''}" data-mode="${k}">${v.i} ${v.n}<span class="eta">${etaText(k,s.d)}</span></button>`).join('');
+  return `<div class="navbox">
+    <div class="seg modeSeg">${seg}</div>
+    <div class="btns">
+      <button class="btn pri" data-nav="amap" data-sid="${s.id}">🧭 高德 App</button>
+      <button class="btn" data-nav="qq" data-sid="${s.id}">🗺️ 腾讯地图 App</button>
+      <button class="btn" data-nav="bd" data-sid="${s.id}">📍 百度地图 App</button>
+      <button class="btn" data-copy="${esc(s.name+', '+s.addr+', London')}">📋 复制地址</button>
+      <button class="btn" data-copy="${s.lat}, ${s.lon}">📍 复制坐标</button>
+    </div></div>`;
 }
 function toast(t){ const el=$('#toast'); el.textContent=t; el.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(()=>el.classList.remove('on'),1600); }
 function copy(t){
@@ -298,6 +340,9 @@ function copy(t){
 }
 document.addEventListener('click',e=>{
   const c=e.target.closest('[data-copy]'); if(c){ e.stopPropagation(); copy(c.getAttribute('data-copy')); return; }
+  const md=e.target.closest('[data-mode]'); if(md){ e.stopPropagation(); navMode=md.dataset.mode; try{localStorage.setItem('navMode',navMode);}catch(_){}
+    $$('[data-mode]').forEach(b=>b.classList.toggle('on',b.dataset.mode===navMode)); toast('导航方式：'+MODES[navMode].n); return; }
+  const nv=e.target.closest('[data-nav]'); if(nv){ e.stopPropagation(); openApp(nv.dataset.nav, nv.dataset.sid); return; }
   const g=e.target.closest('[data-go]'); if(g){ select(g.getAttribute('data-go'), true); }
 });
 // ---------- chips & legend ----------
@@ -410,7 +455,7 @@ $('#scenes').innerHTML='<h3>按场景去哪买</h3>'+SCENES.map(([i,t,id,txt,alt
   const s=byId[id];
   return `<div class="scene"><div class="ico">${i}</div><div><b>${t}</b> → <span class="link" data-go="${id}">${esc(s.name)}</span> <span class="tiny">· ${s.d>=1000?(s.d/1000).toFixed(1)+'km':s.d+'m'} · 步行约${walk(s.d)}分钟</span>
   <div class="muted small" style="margin-top:2px">${esc(txt)}${alts.map(([a,n])=>` <span class="link" data-go="${a}">${esc(n)}</span>`).join(' ·')}</div>
-  <div class="btns" style="margin-top:6px"><a class="btn pri" href="${amapUrl(s)}" target="_blank" rel="noopener">🧭 导航去 ${esc(s.name.split('（')[0])}</a></div></div></div>`;
+  <div class="btns" style="margin-top:6px"><button class="btn pri" data-nav="amap" data-sid="${id}">🧭 导航去 ${esc(s.name.split('（')[0])}</button><button class="btn" data-go="${id}">更多导航方式</button></div></div></div>`;
 }).join('');
 // ---------- calculator ----------
 function renderCalc(){
